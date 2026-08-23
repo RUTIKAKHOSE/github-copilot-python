@@ -39,19 +39,75 @@ def fill_board(board):
                 return False
     return True
 
-def remove_cells(board, clues):
-    attempts = SIZE * SIZE - clues
-    while attempts > 0:
-        row = random.randrange(SIZE)
-        col = random.randrange(SIZE)
-        if board[row][col] != EMPTY:
+
+def _count_solutions(board, limit=2):
+    """Count valid completions for a Sudoku board, stopping early if more than one exists."""
+    def count():
+        best_cell = None
+        best_candidates = None
+
+        for row in range(SIZE):
+            for col in range(SIZE):
+                if board[row][col] != EMPTY:
+                    continue
+
+                candidates = [
+                    num for num in range(1, SIZE + 1)
+                    if is_safe(board, row, col, num)
+                ]
+                if not candidates:
+                    return 0
+                if best_candidates is None or len(candidates) < len(best_candidates):
+                    best_cell = (row, col)
+                    best_candidates = candidates
+                    if len(candidates) == 1:
+                        break
+            if best_candidates is not None and len(best_candidates) == 1:
+                break
+
+        if best_cell is None:
+            return 1
+
+        row, col = best_cell
+        total = 0
+        for candidate in best_candidates:
+            board[row][col] = candidate
+            total += count()
             board[row][col] = EMPTY
-            attempts -= 1
+            if total >= limit:
+                return total
+        return total
+
+    return count()
+
+
+def remove_cells(board, clues):
+    """Remove cells only when the reduced board still has exactly one valid solution."""
+    cells = [(row, col) for row in range(SIZE) for col in range(SIZE)]
+    random.shuffle(cells)
+    clues_remaining = SIZE * SIZE
+
+    for row, col in cells:
+        if clues_remaining <= clues:
+            break
+        if board[row][col] == EMPTY:
+            continue
+
+        original = board[row][col]
+        board[row][col] = EMPTY
+        if _count_solutions(board, limit=2) != 1:
+            board[row][col] = original
+        else:
+            clues_remaining -= 1
+
 
 def generate_puzzle(clues=35):
     board = create_empty_board()
-    fill_board(board)
+    if not fill_board(board):
+        raise RuntimeError("Unable to generate a complete Sudoku board")
     solution = deep_copy(board)
     remove_cells(board, clues)
+    if _count_solutions(board, limit=2) != 1:
+        raise RuntimeError("Generated Sudoku puzzle does not have a unique solution")
     puzzle = deep_copy(board)
     return puzzle, solution
