@@ -76,6 +76,14 @@ body.dark-mode .sudoku-cell {
     color: #f1f3f4;
 }
 
+.sudoku-row:nth-child(-n+3) .sudoku-cell:nth-child(-n+3),
+.sudoku-row:nth-child(-n+3) .sudoku-cell:nth-child(n+7),
+.sudoku-row:nth-child(n+7) .sudoku-cell:nth-child(-n+3),
+.sudoku-row:nth-child(n+7) .sudoku-cell:nth-child(n+7),
+.sudoku-row:nth-child(n+4):nth-child(-n+6) .sudoku-cell:nth-child(n+4):nth-child(-n+6) {
+    background: #e8e8e8;
+}
+
 body.dark-mode .sudoku-row:nth-child(-n+3) .sudoku-cell:nth-child(-n+3),
 body.dark-mode .sudoku-row:nth-child(-n+3) .sudoku-cell:nth-child(n+7),
 body.dark-mode .sudoku-row:nth-child(n+7) .sudoku-cell:nth-child(-n+3),
@@ -122,6 +130,18 @@ body.dark-mode .sudoku-cell.hint {
 
 body.dark-mode .sudoku-cell.incorrect {
     background: #6b3038;
+    color: #ffdadc;
+}
+
+#sudoku-board .sudoku-row:nth-child(n) .sudoku-cell.invalid-entry {
+    background: #ffcdd2;
+    border-color: #d32f2f;
+    color: #8e0000;
+}
+
+body.dark-mode #sudoku-board .sudoku-row:nth-child(n) .sudoku-cell.invalid-entry {
+    background: #6b3038;
+    border-color: #ff8a8a;
     color: #ffdadc;
 }
 

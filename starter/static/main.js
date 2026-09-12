@@ -23,8 +23,15 @@ function getScores() {
     return storedScores
       .filter((score) => score && typeof score.name === 'string'
         && score.name.trim() && Number.isInteger(score.time) && score.time >= 0
-        && typeof score.difficulty === 'string' && Number.isInteger(score.hints)
+        && typeof score.difficulty === 'string' && score.difficulty.trim()
+        && Number.isInteger(score.hints)
         && score.hints >= 0)
+      .map((score) => ({
+        name: score.name.trim().slice(0, 40),
+        time: score.time,
+        difficulty: score.difficulty.trim(),
+        hints: score.hints,
+      }))
       .sort((first, second) => first.time - second.time)
       .slice(0, 10);
   } catch (error) {
@@ -32,10 +39,19 @@ function getScores() {
   }
 }
 
+function persistScores(scores) {
+  try {
+    localStorage.setItem(SCOREBOARD_STORAGE_KEY, JSON.stringify(scores.slice(0, 10)));
+  } catch (error) {
+    // The game remains playable when storage is unavailable.
+  }
+}
+
 function renderScoreboard() {
   const scoreboardBody = document.getElementById('scoreboard-body');
   scoreboardBody.innerHTML = '';
   const scores = getScores();
+  persistScores(scores);
   if (scores.length === 0) {
     const row = scoreboardBody.insertRow();
     const cell = row.insertCell();
@@ -55,18 +71,15 @@ function renderScoreboard() {
 
 function saveScore(name) {
   const scores = getScores();
+  const playerName = String(name || '').trim().slice(0, 40) || 'Anonymous';
   scores.push({
-    name,
+    name: playerName,
     time: elapsedSeconds,
     difficulty: getSelectedDifficulty(),
     hints: hintsUsed,
   });
   scores.sort((first, second) => first.time - second.time);
-  try {
-    localStorage.setItem(SCOREBOARD_STORAGE_KEY, JSON.stringify(scores.slice(0, 10)));
-  } catch (error) {
-    // The game remains playable when storage is unavailable.
-  }
+  persistScores(scores);
   renderScoreboard();
 }
 
@@ -119,6 +132,54 @@ function getBoardValues() {
   return board;
 }
 
+function markConflictingCells() {
+  const boardDiv = document.getElementById('sudoku-board');
+  const inputs = Array.from(boardDiv.getElementsByTagName('input'));
+  const conflicts = new Set();
+  const groups = [];
+
+  for (let row = 0; row < SIZE; row++) {
+    groups.push(Array.from({length: SIZE}, (_, col) => row * SIZE + col));
+  }
+  for (let col = 0; col < SIZE; col++) {
+    groups.push(Array.from({length: SIZE}, (_, row) => row * SIZE + col));
+  }
+  for (let boxRow = 0; boxRow < SIZE; boxRow += 3) {
+    for (let boxCol = 0; boxCol < SIZE; boxCol += 3) {
+      groups.push(Array.from({length: 9}, (_, index) => {
+        const row = boxRow + Math.floor(index / 3);
+        const col = boxCol + (index % 3);
+        return row * SIZE + col;
+      }));
+    }
+  }
+
+  inputs.forEach((input) => input.classList.remove('invalid-entry'));
+  groups.forEach((group) => {
+    const cellsByValue = new Map();
+    group.forEach((index) => {
+      const input = inputs[index];
+      if (input.classList.contains('hint')) {
+        return;
+      }
+      const value = input.value;
+      if (value) {
+        if (!cellsByValue.has(value)) {
+          cellsByValue.set(value, []);
+        }
+        cellsByValue.get(value).push(index);
+      }
+    });
+    cellsByValue.forEach((cells) => {
+      if (cells.length > 1) {
+        cells.forEach((index) => conflicts.add(index));
+      }
+    });
+  });
+
+  conflicts.forEach((index) => inputs[index].classList.add('invalid-entry'));
+}
+
 function createBoardElement() {
   const boardDiv = document.getElementById('sudoku-board');
   boardDiv.innerHTML = '';
@@ -135,6 +196,7 @@ function createBoardElement() {
       input.addEventListener('input', (e) => {
         const val = e.target.value.replace(/[^1-9]/g, '');
         e.target.value = val;
+        markConflictingCells();
       });
       rowDiv.appendChild(input);
     }

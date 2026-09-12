@@ -102,12 +102,11 @@ def remove_cells(board, clues):
 
 
 def generate_puzzle(clues=35):
-    board = create_empty_board()
-    if not fill_board(board):
-        raise RuntimeError("Unable to generate a complete Sudoku board")
-    solution = deep_copy(board)
-    remove_cells(board, clues)
-    if _count_solutions(board, limit=2) != 1:
-        raise RuntimeError("Generated Sudoku puzzle does not have a unique solution")
-    puzzle = deep_copy(board)
-    return puzzle, solution
+    while True:
+        board = create_empty_board()
+        if not fill_board(board):
+            raise RuntimeError("Unable to generate a complete Sudoku board")
+        solution = deep_copy(board)
+        remove_cells(board, clues)
+        if _count_solutions(board, limit=2) == 1:
+            return deep_copy(board), solution
